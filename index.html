@@ -647,19 +647,19 @@
   <div class="setup-box">
     <h2>// JARVIS</h2>
     <p>
-      Masukkan <strong>Gemini API Key</strong> kamu untuk mengaktifkan sistem.<br>
-      Dapatkan API key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>.<br><br>
+      Masukkan <strong>Claude API Key</strong> kamu untuk mengaktifkan sistem.<br>
+      Dapatkan API key di <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>.<br><br>
       Key disimpan hanya di browser kamu (localStorage). Tidak dikirim ke server manapun.
     </p>
     <input
       type="password"
       id="api-key-input"
       class="setup-input"
-      placeholder="AIzaSy..."
+      placeholder="sk-ant-..."
       autocomplete="off"
     />
     <button class="setup-btn" onclick="saveApiKey()">AKTIFKAN JARVIS</button>
-    <p class="setup-note">Model: gemini-2.0-flash · Gratis · No server</p>
+    <p class="setup-note">Model: claude-sonnet-4-20250514 · No server</p>
   </div>
 </div>
 
@@ -678,7 +678,7 @@
   <div class="hud-status">
     <div class="status-item">
       <span class="status-label">MODEL</span>
-      <span class="status-value" id="hud-model">GEMINI 2.0</span>
+      <span class="status-value" id="hud-model">CLAUDE</span>
     </div>
     <div class="status-item">
       <span class="status-label">MSG</span>
@@ -764,8 +764,8 @@
   // ============================
   // CONFIG
   // ============================
-  const MODEL = 'gemini-2.0-flash';
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const MODEL = 'claude-sonnet-4-20250514';
+  const API_URL = 'https://api.anthropic.com/v1/messages';
   const SYSTEM_PROMPT = `Kamu adalah JARVIS (Just A Rather Very Intelligent System), asisten AI cerdas yang terinspirasi dari asisten Tony Stark di film Iron Man. 
 
 Kepribadianmu:
@@ -790,21 +790,21 @@ Format jawaban:
   // ============================
   function saveApiKey() {
     const key = document.getElementById('api-key-input').value.trim();
-    if (!key.startsWith('AI') || key.length < 20) {
-      alert('API key tidak valid. Pastikan dimulai dengan "AI..."');
+    if (!key.startsWith('sk-ant-') || key.length < 20) {
+      alert('API key tidak valid. Pastikan dimulai dengan "sk-ant-..."');
       return;
     }
-    localStorage.setItem('jarvis_gemini_key', key);
+    localStorage.setItem('jarvis_claude_key', key);
     document.getElementById('setup-panel').style.display = 'none';
   }
 
   function getApiKey() {
-    return localStorage.getItem('jarvis_gemini_key');
+    return localStorage.getItem('jarvis_claude_key');
   }
 
   function resetApiKey() {
     if (confirm('Ganti API Key?')) {
-      localStorage.removeItem('jarvis_gemini_key');
+      localStorage.removeItem('jarvis_claude_key');
       document.getElementById('setup-panel').style.display = 'flex';
     }
   }
@@ -915,7 +915,7 @@ Format jawaban:
     updateCount();
 
     addMessage('user', text);
-    conversationHistory.push({ role: 'user', parts: [{ text }] });
+    conversationHistory.push({ role: 'user', content: text });
 
     msgCount++;
     document.getElementById('hud-msg-count').textContent = msgCount;
@@ -930,19 +930,20 @@ Format jawaban:
     addMessage('ai', '', true);
 
     try {
-      const body = {
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: conversationHistory,
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 1024,
-        }
-      };
-
-      const res = await fetch(`${API_URL}?key=${apiKey}`, {
+      const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: conversationHistory
+        })
       });
 
       const data = await res.json();
@@ -954,8 +955,8 @@ Format jawaban:
         throw new Error(data.error.message || 'API Error');
       }
 
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, saya tidak mendapatkan respons.';
-      conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+      const reply = data.content?.[0]?.text || 'Maaf, saya tidak mendapatkan respons.';
+      conversationHistory.push({ role: 'assistant', content: reply });
 
       addMessage('ai', reply);
       setStatus('ONLINE', true);
