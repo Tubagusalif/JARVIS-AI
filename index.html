@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPEN JARVIS AI</title>
+  <style>
+    /* ============================
+       RESET & BASE
+    ============================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #050d1a;
+      --surface: #0a1628;
+      --surface2: #0f1f38;
+      --accent: #00d4ff;
+      --accent2: #0066ff;
+      --accent-dim: rgba(0, 212, 255, 0.12);
+      --accent-glow: rgba(0, 212, 255, 0.3);
+      --text: #c8e6f5;
+      --text-muted: #5a8aaa;
+      --border: rgba(0, 212, 255, 0.2);
+      --border-strong: rgba(0, 212, 255, 0.5);
+      --user-bubble: #0f2a4a;
+      --ai-bubble: #060f1f;
+      --danger: #ff4466;
+      --success: #00ffaa;
+      --font: 'Courier New', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ============================
+       ANIMATED GRID BACKGROUND
+    ============================ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ============================
+       HEADER / HUD
+    ============================ */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .hud-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hud-orb {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: orb-pulse 2s ease-in-out infinite;
+      position: relative;
+    }
+
+    .hud-orb::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: orb-inner 2s ease-in-out infinite;
+    }
+
+    @keyframes orb-pulse {
+      0%, 100% { box-shadow: 0 0 6px var(--accent-glow), 0 0 12px var(--accent-glow); }
+      50% { box-shadow: 0 0 16px var(--accent-glow), 0 0 32px var(--accent-glow); }
+    }
+
+    @keyframes orb-inner {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    .hud-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hud-title-main {
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      color: var(--accent);
+      text-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .hud-title-sub {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text-muted);
+    }
+
+    .hud-status {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .status-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+    }
+
+    .status-value {
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    #status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ============================
+       API KEY SETUP PANEL
+    ============================ */
+    #setup-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 13, 26, 0.97);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .setup-box {
+      width: min(480px, 90vw);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 36px;
+      text-align: center;
+    }
+
+    .setup-box h2 {
+      font-size: 22px;
+      letter-spacing: 4px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      text-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .setup-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .setup-box a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .setup-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-family: var(--font);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .setup-input:focus {
+      border-color: var(--accent);
+    }
+
+    .setup-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .setup-btn:hover { opacity: 0.85; }
+
+    .setup-note {
+      margin-top: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ============================
+       CHAT AREA
+    ============================ */
+    #chat-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+      scroll-behavior: smooth;
+    }
+
+    #chat-wrapper::-webkit-scrollbar { width: 4px; }
+    #chat-wrapper::-webkit-scrollbar-track { background: transparent; }
+    #chat-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .msg {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      animation: msg-in 0.3s ease;
+    }
+
+    @keyframes msg-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      letter-spacing: 1px;
+      flex-shrink: 0;
+      color: var(--accent);
+    }
+
+    .msg.user .msg-avatar {
+      background: var(--user-bubble);
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .msg-bubble {
+      max-width: 72%;
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      border-radius: 4px 12px 12px 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--user-bubble);
+      border-color: var(--accent2);
+      border-radius: 12px 4px 12px 12px;
+      color: #c8d8f5;
+    }
+
+    .msg-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .msg.user .msg-label { text-align: right; }
+
+    /* typing indicator */
+    .typing-dots {
+      display: flex;
+      gap: 5px;
+      padding: 4px 0;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: dot-bounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* welcome screen */
+    #welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      gap: 16px;
+    }
+
+    .welcome-ring {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: orb-pulse 2s infinite;
+    }
+
+    .welcome-ring-inner {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 1px solid var(--accent2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    #welcome h1 {
+      font-size: 28px;
+      letter-spacing: 6px;
+      color: var(--accent);
+      text-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    #welcome p {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 360px;
+      line-height: 1.6;
+    }
+
+    .quick-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .quick-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-family: var(--font);
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ============================
+       INPUT BAR
+    ============================ */
+    #input-bar {
+      position: relative;
+      z-index: 10;
+      padding: 16px 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-inner {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: border-color 0.2s;
+    }
+
+    .input-inner:focus-within {
+      border-color: var(--accent);
+    }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text);
+      resize: none;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+
+    #user-input::placeholder { color: var(--text-muted); }
+
+    .input-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .input-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .input-btn svg { width: 16px; height: 16px; fill: var(--text-muted); }
+    .input-btn:hover svg { fill: var(--accent); }
+
+    #mic-btn.listening {
+      border-color: var(--success);
+      background: rgba(0, 255, 170, 0.1);
+    }
+
+    #mic-btn.listening svg { fill: var(--success); }
+
+    #mic-btn.speaking {
+      border-color: var(--danger);
+      background: rgba(255, 68, 102, 0.15);
+      animation: mic-pulse 0.4s ease-in-out infinite;
+    }
+
+    #mic-btn.speaking svg { fill: var(--danger); }
+
+    #mic-btn.paused {
+      border-color: var(--text-muted);
+      background: transparent;
+      opacity: 0.5;
+    }
+
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,68,102,0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(255,68,102,0); }
+    }
+
+    /* Voice bar — live waveform indicator */
+    #voice-bar {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    #voice-bar.active { display: flex; }
+
+    .vb-label { flex: 1; }
+
+    .vb-waves {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 20px;
+    }
+
+    .vb-waves span {
+      display: block;
+      width: 3px;
+      border-radius: 2px;
+      background: var(--accent);
+      animation: wave 1s ease-in-out infinite;
+    }
+
+    .vb-waves span:nth-child(1) { height: 4px; animation-delay: 0s; }
+    .vb-waves span:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+    .vb-waves span:nth-child(3) { height: 16px; animation-delay: 0.2s; }
+    .vb-waves span:nth-child(4) { height: 10px; animation-delay: 0.3s; }
+    .vb-waves span:nth-child(5) { height: 4px; animation-delay: 0.4s; }
+
+    .vb-waves.speaking span { background: var(--danger); }
+    .vb-waves.speaking span { animation-duration: 0.4s; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+      50% { transform: scaleY(1); opacity: 1; }
+    }
+
+    .vb-countdown {
+      font-size: 13px;
+      color: var(--accent);
+      min-width: 20px;
+      text-align: right;
+    }
+
+    .vb-stop-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: var(--font);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .vb-stop-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    #send-btn { border-color: var(--accent2); }
+    #send-btn svg { fill: var(--accent2); }
+    #send-btn:hover { background: rgba(0,102,255,0.15); border-color: var(--accent); }
+
+    #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .input-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding: 0 2px;
+    }
+
+    .input-hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    #char-count {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* ============================
+       SCANLINE EFFECT
+    ============================ */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.04) 3px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* ============================
+       SCROLLBAR MINIMAL
+    ============================ */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    /* ============================
+       RESPONSIVE
+    ============================ */
+    @media (max-width: 600px) {
+      header { padding: 10px 16px; }
+      .hud-status { gap: 12px; }
+      .status-item:first-child { display: none; }
+      #chat-wrapper { padding: 16px; }
+      #input-bar { padding: 12px 16px; }
+      .msg-bubble { max-width: 85%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== API KEY SETUP ==================== -->
+<div id="setup-panel">
+  <div class="setup-box">
+    <h2>// JARVIS</h2>
+    <p>
+      Masukkan <strong>Gemini API Key</strong> kamu untuk mengaktifkan sistem.<br>
+      Dapatkan API key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>.<br><br>
+      Key disimpan hanya di browser kamu (localStorage). Tidak dikirim ke server manapun.
+    </p>
+    <input
+      type="password"
+      id="api-key-input"
+      class="setup-input"
+      placeholder="AIzaSy..."
+      autocomplete="off"
+    />
+    <button class="setup-btn" onclick="saveApiKey()">AKTIFKAN JARVIS</button>
+    <p class="setup-note">Model: gemini-2.0-flash · Gratis · No server</p>
+  </div>
+</div>
+
+<!-- ==================== HEADER ==================== -->
+<header>
+  <div class="hud-logo">
+    <div class="hud-orb">
+      <div style="width:12px;height:12px;border-radius:50%;background:var(--accent);"></div>
+    </div>
+    <div class="hud-title">
+      <span class="hud-title-main">JARVIS</span>
+      <span class="hud-title-sub">OPEN · AI · SYSTEM</span>
+    </div>
+  </div>
+
+  <div class="hud-status">
+    <div class="status-item">
+      <span class="status-label">MODEL</span>
+      <span class="status-value" id="hud-model">GEMINI 2.0</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">MSG</span>
+      <span class="status-value" id="hud-msg-count">0</span>
+    </div>
+    <div class="status-item" style="flex-direction:row; align-items:center; gap:8px;">
+      <div id="status-dot"></div>
+      <span class="status-value" id="status-text" style="font-size:11px;letter-spacing:1px;">ONLINE</span>
+    </div>
+    <button class="input-btn" onclick="resetApiKey()" title="Ganti API Key" style="border:none;opacity:0.5;">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ==================== VOICE BAR ==================== -->
+<div id="voice-bar">
+  <div class="vb-waves" id="vb-waves">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <span class="vb-label" id="vb-label">MENDENGARKAN...</span>
+  <span class="vb-countdown" id="vb-countdown"></span>
+  <button class="vb-stop-btn" onclick="pauseVoice()">PAUSE</button>
+</div>
+
+<!-- ==================== CHAT WRAPPER ==================== -->
+<div id="chat-wrapper">
+  <div id="welcome">
+    <div class="welcome-ring">
+      <div class="welcome-ring-inner">J</div>
+    </div>
+    <h1>JARVIS</h1>
+    <p>Just A Rather Very Intelligent System.<br>Siap membantu. Ketik pesan atau tekan mic.</p>
+    <div class="quick-btns">
+      <button class="quick-btn" onclick="sendQuick('Halo JARVIS, perkenalkan dirimu.')">Perkenalan</button>
+      <button class="quick-btn" onclick="sendQuick('Apa yang bisa kamu bantu hari ini?')">Kemampuan</button>
+      <button class="quick-btn" onclick="sendQuick('Ceritakan tentang Iron Man dan JARVIS.')">Iron Man lore</button>
+      <button class="quick-btn" onclick="sendQuick('Bantu saya debug kode Python.')">Debug kode</button>
+    </div>
+  </div>
+  <div id="messages"></div>
+</div>
+
+<!-- ==================== INPUT BAR ==================== -->
+<div id="input-bar">
+  <div class="input-inner">
+    <textarea
+      id="user-input"
+      rows="1"
+      placeholder="// Ketik perintah atau pertanyaan..."
+      onkeydown="handleKey(event)"
+      oninput="autoResize(this); updateCount()"
+    ></textarea>
+
+    <!-- MIC BUTTON -->
+    <button class="input-btn" id="mic-btn" onclick="toggleMic()" title="Voice input">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93H2c0 4.96 3.57 9.08 8 9.79V21h4v-3.28c4.43-.7 8-4.82 8-9.79h-2c0 4.08-3.06 7.44-7 7.93V15.93z"/>
+      </svg>
+    </button>
+
+    <!-- CLEAR BUTTON -->
+    <button class="input-btn" onclick="clearChat()" title="Clear chat">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+      </svg>
+    </button>
+
+    <!-- SEND BUTTON -->
+    <button class="input-btn" id="send-btn" onclick="sendMessage()" title="Kirim">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </div>
+  <div class="input-footer">
+    <span class="input-hint">ENTER = kirim · SHIFT+ENTER = baris baru · MIC = suara</span>
+    <span id="char-count">0 / 4000</span>
+  </div>
+</div>
+
+<script>
+  // ============================
+  // CONFIG
+  // ============================
+  const MODEL = 'gemini-2.0-flash';
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const SYSTEM_PROMPT = `Kamu adalah JARVIS (Just A Rather Very Intelligent System), asisten AI cerdas yang terinspirasi dari asisten Tony Stark di film Iron Man. 
+
+Kepribadianmu:
+- Cerdas, sopan, dan sedikit formal namun bisa santai
+- Sesekali gunakan terminologi teknis yang terdengar futuristik
+- Gunakan sapaan "Sir" atau "Tuan" sesekali untuk memperkuat karakter
+- Jawab dalam bahasa yang sama dengan pengguna (Indonesia jika ditanya dalam Bahasa Indonesia)
+- Efisien dan to-the-point, tapi tetap ramah
+- Jika ditanya sesuatu yang tidak bisa kamu lakukan sebagai AI, katakan dengan elegan
+
+Format jawaban:
+- Gunakan markdown jika perlu (bold, list, code block)
+- Jangan terlalu panjang kecuali memang diperlukan
+- Mulai dengan respons langsung, bukan basa-basi panjang`;
+
+  let conversationHistory = [];
+  let isLoading = false;
+  let msgCount = 0;
+
+  // ============================
+  // API KEY MANAGEMENT
+  // ============================
+  function saveApiKey() {
+    const key = document.getElementById('api-key-input').value.trim();
+    if (!key.startsWith('AI') || key.length < 20) {
+      alert('API key tidak valid. Pastikan dimulai dengan "AI..."');
+      return;
+    }
+    localStorage.setItem('jarvis_gemini_key', key);
+    document.getElementById('setup-panel').style.display = 'none';
+  }
+
+  function getApiKey() {
+    return localStorage.getItem('jarvis_gemini_key');
+  }
+
+  function resetApiKey() {
+    if (confirm('Ganti API Key?')) {
+      localStorage.removeItem('jarvis_gemini_key');
+      document.getElementById('setup-panel').style.display = 'flex';
+    }
+  }
+
+  // Check on load
+  window.addEventListener('DOMContentLoaded', () => {
+    if (getApiKey()) {
+      document.getElementById('setup-panel').style.display = 'none';
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+    initSpeech();
+  });
+
+  // ============================
+  // CLOCK
+  // ============================
+  function updateClock() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateEl = document.getElementById('hud-model');
+    if (dateEl) dateEl.textContent = time;
+  }
+
+  // ============================
+  // CHAT RENDERING
+  // ============================
+  function addMessage(role, content, isTyping = false) {
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    const messagesEl = document.getElementById('messages');
+    const msgEl = document.createElement('div');
+    msgEl.className = `msg ${role}`;
+
+    const label = role === 'user' ? 'YOU' : 'JARVIS';
+    const avatar = role === 'user' ? 'YOU' : 'JAR';
+
+    if (isTyping) {
+      msgEl.id = 'typing-msg';
+      msgEl.innerHTML = `
+        <div class="msg-avatar">${avatar}</div>
+        <div>
+          <div class="msg-label">${label}</div>
+          <div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
+        </div>
+      `;
+    } else {
+      const formatted = formatMarkdown(content);
+      msgEl.innerHTML = `
+        <div class="msg-avatar">${avatar}</div>
+        <div>
+          <div class="msg-label">${label}</div>
+          <div class="msg-bubble">${formatted}</div>
+        </div>
+      `;
+    }
+
+    messagesEl.appendChild(msgEl);
+    scrollToBottom();
+    return msgEl;
+  }
+
+  function formatMarkdown(text) {
+    // Basic markdown formatting
+    return text
+      .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) =>
+        `<pre style="background:#000d1a;border:1px solid var(--border);border-radius:4px;padding:12px;overflow-x:auto;font-size:12px;margin:8px 0;"><code>${escapeHtml(code.trim())}</code></pre>`)
+      .replace(/`([^`]+)`/g, '<code style="background:#000d1a;padding:2px 6px;border-radius:3px;font-size:13px;">$1</code>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--accent)">$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^### (.+)$/gm, '<h3 style="color:var(--accent);font-size:14px;margin:8px 0 4px;letter-spacing:1px;">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 style="color:var(--accent);font-size:15px;margin:10px 0 4px;letter-spacing:2px;">$1</h2>')
+      .replace(/^- (.+)$/gm, '<span style="display:block;padding-left:16px;">▸ $1</span>')
+      .replace(/^\d+\. (.+)$/gm, '<span style="display:block;padding-left:16px;">→ $1</span>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function scrollToBottom() {
+    const wrapper = document.getElementById('chat-wrapper');
+    wrapper.scrollTop = wrapper.scrollHeight;
+  }
+
+  // ============================
+  // SEND MESSAGE
+  // ============================
+  async function sendMessage() {
+    if (isLoading) return;
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      document.getElementById('setup-panel').style.display = 'flex';
+      return;
+    }
+
+    input.value = '';
+    autoResize(input);
+    updateCount();
+
+    addMessage('user', text);
+    conversationHistory.push({ role: 'user', parts: [{ text }] });
+
+    msgCount++;
+    document.getElementById('hud-msg-count').textContent = msgCount;
+
+    isLoading = true;
+    document.getElementById('send-btn').disabled = true;
+    setStatus('THINKING...', false);
+    // Hentikan mic selama AI menjawab
+    stopListening();
+    hideVoiceBar();
+
+    addMessage('ai', '', true);
+
+    try {
+      const body = {
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: conversationHistory,
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 1024,
+        }
+      };
+
+      const res = await fetch(`${API_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+
+      const typingMsg = document.getElementById('typing-msg');
+      if (typingMsg) typingMsg.remove();
+
+      if (data.error) {
+        throw new Error(data.error.message || 'API Error');
+      }
+
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, saya tidak mendapatkan respons.';
+      conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+
+      addMessage('ai', reply);
+      setStatus('ONLINE', true);
+
+    } catch (err) {
+      const typingMsg = document.getElementById('typing-msg');
+      if (typingMsg) typingMsg.remove();
+
+      addMessage('ai', `⚠ ERROR: ${err.message}\n\nPeriksa API key atau koneksi internet kamu.`);
+      setStatus('ERROR', false);
+    }
+
+    isLoading = false;
+    document.getElementById('send-btn').disabled = false;
+    // Resume mic otomatis setelah AI selesai menjawab
+    if (!isVoicePaused) setTimeout(() => startListening(), 600);
+  }
+
+  function sendQuick(text) {
+    document.getElementById('user-input').value = text;
+    sendMessage();
+  }
+
+  function setStatus(text, online) {
+    document.getElementById('status-text').textContent = text;
+    const dot = document.getElementById('status-dot');
+    dot.style.background = online ? 'var(--success)' : online === false ? 'var(--danger)' : 'var(--accent)';
+  }
+
+  // ============================
+  // INPUT HANDLERS
+  // ============================
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function updateCount() {
+    const len = document.getElementById('user-input').value.length;
+    document.getElementById('char-count').textContent = `${len} / 4000`;
+  }
+
+  function clearChat() {
+    if (!confirm('Hapus semua riwayat percakapan?')) return;
+    conversationHistory = [];
+    msgCount = 0;
+    document.getElementById('hud-msg-count').textContent = '0';
+    document.getElementById('messages').innerHTML = '';
+    const chatWrapper = document.getElementById('chat-wrapper');
+    chatWrapper.innerHTML = `
+      <div id="welcome">
+        <div class="welcome-ring">
+          <div class="welcome-ring-inner">J</div>
+        </div>
+        <h1>JARVIS</h1>
+        <p>Just A Rather Very Intelligent System.<br>Siap membantu. Ketik pesan atau tekan mic.</p>
+        <div class="quick-btns">
+          <button class="quick-btn" onclick="sendQuick('Halo JARVIS, perkenalkan dirimu.')">Perkenalan</button>
+          <button class="quick-btn" onclick="sendQuick('Apa yang bisa kamu bantu hari ini?')">Kemampuan</button>
+          <button class="quick-btn" onclick="sendQuick('Ceritakan tentang Iron Man dan JARVIS.')">Iron Man lore</button>
+          <button class="quick-btn" onclick="sendQuick('Bantu saya debug kode Python.')">Debug kode</button>
+        </div>
+      </div>
+      <div id="messages"></div>
+    `;
+  }
+
+  // ============================
+  // VOICE — ALWAYS-ON MODE
+  // ============================
+  const SILENCE_DELAY = 1800;   // ms diam sebelum auto-kirim
+  const RESTART_DELAY = 300;    // ms sebelum recognition di-restart
+
+  let recognition = null;
+  let isListening = false;       // mic aktif?
+  let isVoicePaused = false;    // user pause manual?
+  let silenceTimer = null;
+  let countdownTimer = null;
+  let silenceRemaining = 0;
+  let currentInterim = '';
+
+  function initSpeech() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      const micBtn = document.getElementById('mic-btn');
+      micBtn.title = 'Browser tidak mendukung voice input (gunakan Chrome)';
+      micBtn.style.opacity = '0.3';
+      return;
+    }
+
+    buildRecognition();
+
+    // Auto-start mic setelah page load
+    setTimeout(() => {
+      if (!isVoicePaused) startListening();
+    }, 1000);
+  }
+
+  function buildRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'id-ID';
+    recognition.interimResults = true;
+    recognition.continuous = true;   // <-- terus mendengarkan tanpa berhenti
+
+    recognition.onstart = () => {
+      isListening = true;
+      showVoiceBar('listening');
+      setMicState('listening');
+      setStatus('SIAP MENDENGAR', true);
+    };
+
+    recognition.onresult = (e) => {
+      let interimText = '';
+      let finalText = '';
+
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          finalText += t;
+        } else {
+          interimText += t;
+        }
+      }
+
+      // Tampilkan teks interim di input field secara live
+      const inputEl = document.getElementById('user-input');
+      currentInterim = interimText;
+      inputEl.value = (finalText || currentInterim);
+      autoResize(inputEl);
+      updateCount();
+
+      // Ada suara — tampilkan waveform aktif
+      showVoiceBar('speaking');
+      setMicState('speaking');
+
+      // Reset timer silence setiap kali ada suara masuk
+      clearSilenceTimer();
+
+      if (finalText) {
+        // Final transcript diterima — mulai hitung mundur silence
+        inputEl.value = finalText.trim();
+        startSilenceTimer();
+      }
+    };
+
+    recognition.onspeechend = () => {
+      // Browser deteksi bicara berhenti
+      showVoiceBar('listening');
+      setMicState('listening');
+      startSilenceTimer();
+    };
+
+    recognition.onend = () => {
+      isListening = false;
+      // Auto restart kecuali user pause atau sedang loading
+      if (!isVoicePaused && !isLoading) {
+        setTimeout(() => {
+          if (!isVoicePaused) startListening();
+        }, RESTART_DELAY);
+      }
+    };
+
+    recognition.onerror = (e) => {
+      // 'no-speech' adalah normal, restart saja
+      if (e.error === 'no-speech') return;
+      // Error lain — coba restart setelah jeda
+      if (!isVoicePaused) {
+        setTimeout(() => startListening(), 1000);
+      }
+    };
+  }
+
+  function startListening() {
+    if (isListening || isVoicePaused) return;
+    try {
+      recognition.start();
+    } catch (e) {
+      // Kalau masih ada session, rebuild
+      buildRecognition();
+      setTimeout(() => recognition.start(), 200);
+    }
+  }
+
+  function stopListening() {
+    clearSilenceTimer();
+    if (isListening) {
+      try { recognition.stop(); } catch (e) {}
+    }
+    isListening = false;
+  }
+
+  function pauseVoice() {
+    isVoicePaused = true;
+    stopListening();
+    hideVoiceBar();
+    setMicState('paused');
+    setStatus('MIC PAUSE', false);
+  }
+
+  function resumeVoice() {
+    isVoicePaused = false;
+    startListening();
+  }
+
+  function toggleMic() {
+    if (isVoicePaused) {
+      resumeVoice();
+    } else {
+      pauseVoice();
+    }
+  }
+
+  // Countdown silence sebelum auto-kirim
+  function startSilenceTimer() {
+    clearSilenceTimer();
+    silenceRemaining = SILENCE_DELAY;
+
+    const step = 100;
+    countdownTimer = setInterval(() => {
+      silenceRemaining -= step;
+      const sec = (silenceRemaining / 1000).toFixed(1);
+      document.getElementById('vb-countdown').textContent = sec + 's';
+
+      if (silenceRemaining <= 0) {
+        clearSilenceTimer();
+        autoSendVoice();
+      }
+    }, step);
+  }
+
+  function clearSilenceTimer() {
+    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    document.getElementById('vb-countdown').textContent = '';
+  }
+
+  async function autoSendVoice() {
+    const inputEl = document.getElementById('user-input');
+    const text = inputEl.value.trim();
+    if (!text || isLoading) return;
+
+    // Stop listening selama AI reply (supaya tidak tangkap suara sendiri)
+    stopListening();
+    showVoiceBar('loading');
+    setMicState('paused');
+
+    await sendMessage();
+
+    // Setelah reply, langsung dengerin lagi
+    if (!isVoicePaused) {
+      setTimeout(() => startListening(), 500);
+    }
+  }
+
+  // ============================
+  // VOICE BAR UI
+  // ============================
+  function showVoiceBar(state) {
+    const bar = document.getElementById('voice-bar');
+    const waves = document.getElementById('vb-waves');
+    const label = document.getElementById('vb-label');
+
+    bar.classList.add('active');
+    waves.className = 'vb-waves';
+
+    if (state === 'listening') {
+      waves.classList.add('');
+      label.textContent = 'MENDENGARKAN...';
+      label.style.color = 'var(--text-muted)';
+    } else if (state === 'speaking') {
+      waves.classList.add('speaking');
+      label.textContent = 'SUARA TERDETEKSI';
+      label.style.color = 'var(--danger)';
+    } else if (state === 'loading') {
+      label.textContent = 'MEMPROSES...';
+      label.style.color = 'var(--accent)';
+    }
+  }
+
+  function hideVoiceBar() {
+    document.getElementById('voice-bar').classList.remove('active');
+  }
+
+  function setMicState(state) {
+    const btn = document.getElementById('mic-btn');
+    btn.className = 'input-btn';
+    if (state) btn.classList.add(state);
+    // Update tooltip
+    const tips = {
+      listening: 'Mic aktif — klik untuk pause',
+      speaking: 'Suara terdeteksi',
+      paused: 'Mic pause — klik untuk aktifkan',
+    };
+    btn.title = tips[state] || 'Toggle mic';
+  }
+</script>
+</body>
+</html>
